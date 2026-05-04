@@ -5,7 +5,7 @@
 . /usr/lib/init/rc.lib
 
 log "Loading rc.conf settings..."; {
-    load_conf
+    [ -f /etc/rc.conf ] && . /etc/rc.conf
 }
 
 log "Running shutdown pre hooks..."; {
@@ -13,24 +13,7 @@ log "Running shutdown pre hooks..."; {
 }
 
 log "Waiting for services to stop..."; {
-    case $CONFIG_SERVICE in
-        s6)
-            case $CONFIG_INIT in
-                s6)
-                    # If s6 is init s6-svscan will have already done its
-                    # cleanup routine as it execs into this script.
-                ;;
-
-                *)
-                    s6-svscanctl -t "$CONFIG_SERVICE_DIR"
-                ;;
-            esac
-        ;;
-
-        runit)
-            sv force-shutdown "$CONFIG_SERVICE_DIR/"*
-        ;;
-    esac
+    sv force-shutdown /var/service/* >/dev/null 2>&1
 }
 
 log "Saving random seed..."; {
@@ -47,14 +30,16 @@ log "Sending TERM signal to all processes..."; {
 log "Unmounting filesystems and disabling swap..."; {
     swapoff -a
 
-    # Skip unmounting pseudo filesystems as they may be needed below for
-    # encryption and user shutdown scripts.
+    # Skip unmounting pseudo filesystems as they may be
+    # needed below for encryption and user shutdown scripts.
     #
-    # The '-t' flag is a part of the LSB standard and is supported by busybox,
-    # toybox, util-linux, FreeBSD, NetBSD, OpenBSD and others.
+    # The '-t' flag is a part of the LSB standard and is
+    # supported by busybox, toybox, util-linux, FreeBSD,
+    # NetBSD, OpenBSD and others.
     #
-    # This flag is unsupported by ubase and I consider this a ubase issue. ubase
-    # only supports Linux and this flag is a part of the Linux standard base.
+    # This flag is unsupported by ubase and I consider this
+    # a ubase issue. ubase only supports Linux and this
+    # flag is a part of the Linux standard base.
     umount -rat nosysfs,proc,devtmpfs,tmpfs
 }
 
@@ -67,4 +52,11 @@ log "Running shutdown post hooks..."; {
     run_hook post.shutdown
 }
 
-kpow "${1:-${0##*/rc.}}"
+# Run 'kpow' to signal to the kernel that we want to reboot or
+# poweroff the system. These will only run when '$1' contains
+# a valid action. When busybox init is used, this code is
+# ignored entirely as it handles this itself.
+case $1 in
+    reboot)   kpow r ;;
+    poweroff) kpow p ;;
+esac
