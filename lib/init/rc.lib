@@ -47,15 +47,6 @@ sos() {
     /bin/sh
 }
 
-load_conf() {
-    [ -f /etc/rc.conf ] && . /etc/rc.conf
-
-    : "${CONFIG_INIT:=busybox}"
-    : "${CONFIG_SERVICE:=runit}"
-    : "${CONFIG_SERVICE_DIR:=/var/service}"
-    : "${CONFIG_DEV:=mdev}"
-}
-
 run_hook() {
     for file in /usr/lib/init/rc.d/*."$1" /etc/rc.d/*."$1"; do
         [ -f "$file" ] || continue
@@ -63,20 +54,6 @@ run_hook() {
         log "Running $1 hook: $file"
         . "$file"
     done
-}
-
-run_exec() {
-    case $CONFIG_INIT in
-        busybox|shinit)
-            # These inits expect the script to eventually exit so we cannot use
-            # exec without breaking poweroff/reboot or the boot process itself.
-            setsid "$@" &
-        ;;
-
-        *)
-            exec "$@"
-        ;;
-    esac
 }
 
 random_seed() {
