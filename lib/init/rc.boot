@@ -32,6 +32,10 @@ log "Loading rc.conf settings..."; {
     [ -f /etc/rc.conf ] && . /etc/rc.conf
 }
 
+log "Running boot pre hooks..."; {
+    run_hook pre.boot
+}
+
 log "Starting device manager..."; {
     if command -v udevd >/dev/null; then
         udevd -d
