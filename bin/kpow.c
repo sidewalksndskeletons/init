@@ -20,12 +20,11 @@ int main (int argc, char *argv[]) {
             return 0;
 
         case 'r':
-        case 's':
             reboot(RB_AUTOBOOT);
             return 0;
 
         default:
-            printf("usage: kpow r[eboot]|p[oweroff]|s[hutdown]\n");
+            printf("usage: kpow r[eboot]|p[oweroff]\n");
             return 1;
     }
 }
