@@ -12,7 +12,8 @@ log "Mounting pseudo filesystems..."; {
     mnt mode=0755,nosuid,nodev tmpfs    run  /run
     mnt mode=0755,nosuid       devtmpfs dev  /dev
 
-    mkdir -p /run/user /run/lock /run/log /dev/pts /dev/shm
+    mkdir -p /run/runit /run/user /run/lock \
+             /run/log   /dev/pts  /dev/shm
 
     mnt mode=0620,gid=5,nosuid,noexec devpts devpts /dev/pts
     mnt mode=1777,nosuid,nodev        tmpfs  shm    /dev/shm
@@ -28,32 +29,24 @@ log "Mounting pseudo filesystems..."; {
 }
 
 log "Loading rc.conf settings..."; {
-    load_conf
-}
-
-log "Running boot pre hooks..."; {
-    run_hook pre.boot
+    [ -f /etc/rc.conf ] && . /etc/rc.conf
 }
 
 log "Starting device manager..."; {
-    case $CONFIG_DEV in
-        udevd)
-            udevd -d
-            udevadm trigger -c add -t subsystems
-            udevadm trigger -c add -t devices
-            udevadm settle
-        ;;
+    if command -v udevd >/dev/null; then
+        udevd -d
+        udevadm trigger -c add -t subsystems
+        udevadm trigger -c add -t devices
+        udevadm settle
 
-        mdevd)
-            mdevd & pid_mdevd=$!
-            mdevd-coldplug
-        ;;
+    elif command -v mdevd >/dev/null; then
+        mdevd & pid_mdevd=$!
+        mdevd-coldplug
 
-        mdev)
-            mdev -s
-            mdev -df & pid_mdev=$!
-        ;;
-    esac
+    elif command -v mdev >/dev/null; then
+        mdev -s
+        mdev -df & pid_mdev=$!
+    fi
 }
 
 log "Remounting rootfs as read-only..."; {
@@ -112,25 +105,21 @@ log "Loading sysctl settings..."; {
 }
 
 log "Killing device manager to make way for service..."; {
-    case $CONFIG_DEV in
-        udevd)
-            udevadm control --exit
-        ;;
+    if command -v udevd >/dev/null; then
+        udevadm control --exit
 
-        mdevd)
-            kill "$pid_mdevd"
-        ;;
+    elif [ "$pid_mdevd" ]; then
+        kill "$pid_mdevd"
 
-        mdev)
-            kill "$pid_mdev"
-            command -v mdev > /proc/sys/kernel/hotplug
-        ;;
-    esac
+    elif [ "$pid_mdev" ]; then
+        kill "$pid_mdev"
+        command -v mdev > /proc/sys/kernel/hotplug
+
+    fi 2>/dev/null
 }
 
-log "Running post boot hooks..."; {
+log "Running boot hooks..."; {
     run_hook boot
-    run_hook post.boot
 }
 
 # Calculate how long the boot process took to
@@ -138,25 +127,3 @@ log "Running post boot hooks..."; {
 IFS=. read -r boot_time _ < /proc/uptime
 
 log "Boot stage completed in ${boot_time}s..."
-
-log "Replacing rc.boot with service manager..."; {
-    case $CONFIG_SERVICE in
-        s6)
-            case $CONFIG_INIT in
-                s6)
-                    # If s6 is init s6-svscan is already PID 1 so attempting to
-                    # launch it again just results in an error message..
-                ;;
-
-                *)
-                    run_exec s6-svscan "$CONFIG_SERVICE_DIR"
-                ;;
-            esac
-        ;;
-
-        runit)
-            run_exec respawn /usr/bin/runsvdir -P "$CONFIG_SERVICE_DIR" 'log: ...............................................................................................................................................................................................................................................................'
-        ;;
-    esac
-}
-
