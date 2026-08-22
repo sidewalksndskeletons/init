@@ -7,10 +7,10 @@
 log "Welcome to KISS!"
 
 log "Mounting pseudo filesystems..."; {
-    mnt nosuid,noexec,nodev,hidepid=2    proc     proc /proc
-    mnt nosuid,noexec,nodev    sysfs    sys  /sys
-    mnt mode=0755,nosuid,nodev tmpfs    run  /run
-    mnt mode=0755,nosuid       devtmpfs dev  /dev
+    mnt nosuid,noexec,nodev,hidepid=2 proc     proc /proc
+    mnt nosuid,noexec,nodev           sysfs    sys  /sys
+    mnt mode=0755,nosuid,nodev,noexec tmpfs    run  /run
+    mnt mode=0755,nosuid,noexec       devtmpfs dev  /dev
 
     mkdir -p /run/runit /run/user /run/lock \
              /run/log   /dev/pts  /dev/shm
