@@ -66,7 +66,7 @@ log "Checking filesystems..."; {
 }
 
 log "Mounting rootfs as read-write..."; {
-    mount -o remount,rw,noatime / || sos
+    mount -o remount,rw,noatime,discard,errors=panic / || sos
 }
 
 log "Mounting all local filesystems..."; {
