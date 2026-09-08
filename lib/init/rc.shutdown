@@ -44,7 +44,11 @@ log "Unmounting filesystems and disabling swap..."; {
 }
 
 log "Remounting rootfs as read-only"; {
-    mount -o remount,ro /
+    sync
+    for i in 1 2 3 4 5; do
+        mount -o remount,ro / && break
+        sleep 1
+    done
     sync
 }
 
